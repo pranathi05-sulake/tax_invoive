@@ -23,7 +23,9 @@ class OcrResultsScreen extends StatefulWidget {
 class _OcrResultsScreenState extends State<OcrResultsScreen> {
   int _selectedTabIndex = 0; // 0: Raw Text, 1: Extracted Lines
 
-  String get _fileName => kIsWeb ? 'invoice_sample.png' : widget.imageFile.path.split(Platform.pathSeparator).last;
+  String get _fileName => widget.imageFile.path.contains('/') || widget.imageFile.path.contains('\\')
+      ? widget.imageFile.path.split(RegExp(r'[/\\]')).last
+      : (widget.imageFile.path.isNotEmpty ? widget.imageFile.path : 'Selected Document');
 
   void _copyToClipboard(String text, String label) {
     if (text.isEmpty) return;

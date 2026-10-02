@@ -44,7 +44,7 @@ class FileExportHelper {
 
       // Trigger native Android share/save sheet
       final xFile = XFile(filePath, mimeType: mimeType, name: fileName);
-      final shareResult = await Share.shareXFiles(
+      await Share.shareXFiles(
         [xFile],
         text: shareSubject ?? 'Tax Invoice Export — $fileName',
       );

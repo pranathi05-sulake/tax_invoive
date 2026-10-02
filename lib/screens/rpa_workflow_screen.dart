@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/invoice.dart';
 import '../services/workflow/rpa_workflow_engine.dart';
 import '../services/workflow/rpa_workflow_models.dart';
 import 'rpa_workflow_history_screen.dart';
@@ -16,10 +15,6 @@ class RpaWorkflowScreen extends StatefulWidget {
 
   @override
   State<RpaWorkflowScreen> createState() => _RpaWorkflowScreenState();
-}
-
-class _DefaultEngine extends RpaWorkflowEngine {
-  _DefaultEngine();
 }
 
 class _RpaWorkflowScreenState extends State<RpaWorkflowScreen> {

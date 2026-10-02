@@ -23,17 +23,18 @@ class InvoicePreviewScreen extends StatefulWidget {
 class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   bool _isProcessing = false;
 
-  String get _fileName => kIsWeb ? 'invoice_sample.png' : widget.imageFile.path.split(Platform.pathSeparator).last;
+  String get _fileName => widget.imageFile.path.contains('/') || widget.imageFile.path.contains('\\')
+      ? widget.imageFile.path.split(RegExp(r'[/\\]')).last
+      : (widget.imageFile.path.isNotEmpty ? widget.imageFile.path : 'Selected Document');
 
   String get _fileSizeFormatted {
-    if (kIsWeb) return 'Sample Invoice Image';
     try {
       final bytes = widget.imageFile.lengthSync();
       if (bytes < 1024) return '$bytes B';
       if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
       return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
     } catch (_) {
-      return 'Image file';
+      return 'Image Document';
     }
   }
 
