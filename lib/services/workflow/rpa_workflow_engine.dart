@@ -71,7 +71,7 @@ class RpaWorkflowEngine {
         return await cancelWorkflow(execution, onExecutionUpdated: onExecutionUpdated);
       }
       await recordLog(RpaWorkflowStep.capture, RpaWorkflowStatus.processing, 'Captured invoice document source: ${imageFile.path}');
-      if (!await imageFile.exists()) {
+      if (!kIsWeb && !await imageFile.exists()) {
         execution.errorMessage = 'Invoice source image file not found at path.';
         await recordLog(RpaWorkflowStep.failed, RpaWorkflowStatus.failed, execution.errorMessage!);
         return execution;
