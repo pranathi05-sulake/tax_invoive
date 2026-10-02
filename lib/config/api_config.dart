@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 class ApiConfig {
-  static String _baseUrl = 'http://192.168.0.107:8000';
+  static String _baseUrl = 'http://127.0.0.1:8000';
 
   /// Base URL for FastAPI Company LAN backend server.
   static String get baseUrl => _baseUrl;
