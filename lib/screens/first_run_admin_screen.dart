@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth/auth_service.dart';
+import 'home_screen.dart';
 import 'login_screen.dart';
 
 class FirstRunAdminScreen extends StatefulWidget {
@@ -48,14 +49,14 @@ class _FirstRunAdminScreenState extends State<FirstRunAdminScreen> {
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Administrator account created successfully. Please sign in.'),
+          content: Text('Administrator account created successfully. Welcome to TaxInvoice AI!'),
           backgroundColor: Color(0xFF0F172A),
           behavior: SnackBarBehavior.floating,
         ),
       );
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
         (route) => false,
       );
     } else {

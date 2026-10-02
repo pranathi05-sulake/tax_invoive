@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../services/ocr/ocr_engine.dart';
 import 'ocr_results_screen.dart';
@@ -22,9 +23,10 @@ class InvoicePreviewScreen extends StatefulWidget {
 class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   bool _isProcessing = false;
 
-  String get _fileName => widget.imageFile.path.split(Platform.pathSeparator).last;
+  String get _fileName => kIsWeb ? 'invoice_sample.png' : widget.imageFile.path.split(Platform.pathSeparator).last;
 
   String get _fileSizeFormatted {
+    if (kIsWeb) return 'Sample Invoice Image';
     try {
       final bytes = widget.imageFile.lengthSync();
       if (bytes < 1024) return '$bytes B';
@@ -38,7 +40,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   Future<void> _processInvoiceOcr() async {
     if (_isProcessing) return;
 
-    if (!widget.imageFile.existsSync()) {
+    if (!kIsWeb && !widget.imageFile.existsSync()) {
       debugPrint('[OCR] Error: Image file does not exist at path: ${widget.imageFile.path}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -295,27 +297,49 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
-                                Image.file(
-                                  widget.imageFile,
-                                  fit: BoxFit.contain,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Center(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.broken_image_rounded, color: Colors.white54, size: 48),
-                                          SizedBox(height: 8),
-                                          Text(
-                                            'Unable to render image preview',
-                                            style: TextStyle(color: Colors.white70, fontSize: 13),
+                                kIsWeb
+                                    ? Container(
+                                        color: const Color(0xFF0F172A),
+                                        child: const Center(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.receipt_long_rounded, color: Colors.white, size: 64),
+                                              SizedBox(height: 12),
+                                              Text(
+                                                'Tax Invoice Document Preview',
+                                                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                              ),
+                                              SizedBox(height: 4),
+                                              Text(
+                                                'Ready for On-Device OCR Extraction',
+                                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                                              ),
+                                            ],
                                           ),
-                                        ],
+                                        ),
+                                      )
+                                    : Image.file(
+                                        widget.imageFile,
+                                        fit: BoxFit.contain,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return const Center(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.broken_image_rounded, color: Colors.white54, size: 48),
+                                                SizedBox(height: 8),
+                                                Text(
+                                                  'Unable to render image preview',
+                                                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
-                                ),
                                 Positioned(
                                   top: 12,
                                   right: 12,

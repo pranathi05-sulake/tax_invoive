@@ -48,6 +48,7 @@ dependencies:
   local_auth: ^2.2.0
   flutter_secure_storage: ^9.2.2
   http: ^1.2.0
+  sqflite_common_ffi_web: ^0.4.5
 
 dev_dependencies:
   flutter_test:

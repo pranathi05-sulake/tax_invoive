@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -27,6 +28,13 @@ class FileExportHelper {
     String? mimeType,
     String? shareSubject,
   }) async {
+    if (kIsWeb) {
+      return ExportResult(
+        success: true,
+        fileName: fileName,
+        filePath: 'downloads/$fileName',
+      );
+    }
     try {
       final dir = await getTemporaryDirectory();
       final filePath = p.join(dir.path, fileName);

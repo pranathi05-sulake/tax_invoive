@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/ocr/ocr_engine.dart';
@@ -22,7 +23,7 @@ class OcrResultsScreen extends StatefulWidget {
 class _OcrResultsScreenState extends State<OcrResultsScreen> {
   int _selectedTabIndex = 0; // 0: Raw Text, 1: Extracted Lines
 
-  String get _fileName => widget.imageFile.path.split(Platform.pathSeparator).last;
+  String get _fileName => kIsWeb ? 'invoice_sample.png' : widget.imageFile.path.split(Platform.pathSeparator).last;
 
   void _copyToClipboard(String text, String label) {
     if (text.isEmpty) return;

@@ -28,11 +28,12 @@ class AppSecurityService {
 
   /// Checks if local biometric or device lock hardware is available on the device.
   Future<bool> isHardwareSupported() async {
+    if (kIsWeb) return false;
     try {
       final canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
       final isDeviceSupported = await auth.isDeviceSupported();
       return canAuthenticateWithBiometrics || isDeviceSupported;
-    } on PlatformException catch (e) {
+    } catch (e) {
       debugPrint('[AppSecurityService] Hardware check exception: $e');
       return false;
     }
@@ -40,6 +41,7 @@ class AppSecurityService {
 
   /// Returns true ONLY if local security authentication is currently enabled by user.
   Future<bool> isSecurityEnabled() async {
+    if (kIsWeb) return false;
     try {
       final value = await secureStorage.read(key: _keySecurityEnabled);
       return value == 'true';
@@ -51,7 +53,12 @@ class AppSecurityService {
 
   /// Enables or disables local security authentication.
   Future<void> setSecurityEnabled(bool enabled) async {
-    await secureStorage.write(key: _keySecurityEnabled, value: enabled ? 'true' : 'false');
+    if (kIsWeb) return;
+    try {
+      await secureStorage.write(key: _keySecurityEnabled, value: enabled ? 'true' : 'false');
+    } catch (e) {
+      debugPrint('[AppSecurityService] Error setting security preference: $e');
+    }
   }
 
   /// Prompts the user for local biometric or device passcode authentication.

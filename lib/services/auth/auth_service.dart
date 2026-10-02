@@ -147,9 +147,9 @@ class AuthService {
       );
 
       return await login(username: cleanUsername, password: password);
-    } catch (e) {
-      debugPrint('[AuthService] Exception creating first-run admin: $e');
-      return AuthResult.failure('Failed to create Administrator account.');
+    } catch (e, stack) {
+      debugPrint('[AuthService] Exception creating first-run admin: $e\n$stack');
+      return AuthResult.failure('Failed to create Administrator account: $e');
     }
   }
 

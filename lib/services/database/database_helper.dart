@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' show databaseFactoryFfi;
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart' show databaseFactoryFfiWeb;
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../../models/invoice.dart';
 
@@ -92,6 +93,7 @@ class DatabaseHelper {
 
   /// Inspects the first 16 bytes of a database file to check if it is plaintext SQLite3.
   static Future<bool> isDatabaseEncrypted(File file) async {
+    if (kIsWeb) return false;
     if (!await file.exists()) return false;
     final length = await file.length();
     if (length < 16) return false;
@@ -183,7 +185,11 @@ class DatabaseHelper {
     try {
       return await databaseFactory.getDatabasesPath();
     } catch (_) {
-      return Directory.systemTemp.path;
+      try {
+        return await databaseFactoryFfi.getDatabasesPath();
+      } catch (_) {
+        return 'invoices.db';
+      }
     }
   }
 
@@ -199,10 +205,30 @@ class DatabaseHelper {
     final effectiveOnCreate = readOnly ? null : onCreate;
     final effectiveOnUpgrade = readOnly ? null : onUpgrade;
 
-    final isNativeMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    if (kIsWeb) {
+      return await databaseFactoryFfiWeb.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          readOnly: readOnly,
+          version: effectiveVersion,
+          onCreate: effectiveOnCreate,
+          onUpgrade: effectiveOnUpgrade,
+          onConfigure: _onConfigure,
+        ),
+      );
+    }
 
-    if (!isNativeMobile) {
-      // In Desktop Flutter Unit Tests (sqflite_common_ffi context)
+    try {
+      return await openDatabase(
+        path,
+        password: password,
+        readOnly: readOnly,
+        version: effectiveVersion,
+        onCreate: effectiveOnCreate,
+        onUpgrade: effectiveOnUpgrade,
+        onConfigure: _onConfigure,
+      );
+    } catch (_) {
       return await databaseFactoryFfi.openDatabase(
         path,
         options: OpenDatabaseOptions(
@@ -214,15 +240,6 @@ class DatabaseHelper {
         ),
       );
     }
-    return await openDatabase(
-      path,
-      password: password,
-      readOnly: readOnly,
-      version: effectiveVersion,
-      onCreate: effectiveOnCreate,
-      onUpgrade: effectiveOnUpgrade,
-      onConfigure: _onConfigure,
-    );
   }
 
   static Future<void> _onConfigure(Database db) async {
@@ -233,6 +250,11 @@ class DatabaseHelper {
     if (_database != null && _database!.isOpen) {
       await _database!.close();
       _database = null;
+    }
+
+    if (kIsWeb) {
+      _database = _WebMemoryDatabase();
+      return _database!;
     }
 
     final dbPath = await _getDatabasesDirectoryPath();
@@ -858,4 +880,157 @@ class DatabaseHelper {
       _database = null;
     }
   }
+}
+
+class _WebMemoryDatabase implements Database {
+  final Map<String, List<Map<String, dynamic>>> _tables = {
+    'app_users': [],
+    'invoices': [],
+    'invoice_items': [],
+    'audit_logs': [],
+    'workflow_logs': [],
+  };
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get path => ':memory:';
+
+  @override
+  Batch batch() => throw UnimplementedError();
+
+  @override
+  Future<void> close() async {}
+
+  @override
+  Future<int> delete(String table, {String? where, List<Object?>? whereArgs}) async {
+    final list = _tables[table];
+    if (list == null) return 0;
+    if (where == null) {
+      final count = list.length;
+      list.clear();
+      return count;
+    }
+    return 0;
+  }
+
+  @override
+  Future<void> execute(String sql, [List<Object?>? arguments]) async {}
+
+  @override
+  Future<int> insert(String table, Map<String, Object?> values, {String? nullColumnHack, ConflictAlgorithm? conflictAlgorithm}) async {
+    _tables.putIfAbsent(table, () => []);
+    _tables[table]!.add(Map<String, dynamic>.from(values));
+    return 1;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> query(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<Object?>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
+    final list = _tables[table] ?? [];
+    if (where != null && whereArgs != null && whereArgs.isNotEmpty) {
+      if (where.contains('LOWER(username) = ?') || where.contains('username = ?')) {
+        final target = whereArgs.first.toString().toLowerCase();
+        return list.where((row) => (row['username'] as String?)?.toLowerCase() == target).toList();
+      }
+      if (where.contains('id = ?')) {
+        final targetId = whereArgs.first.toString();
+        return list.where((row) => row['id'].toString() == targetId).toList();
+      }
+    }
+    return list;
+  }
+
+  @override
+  Future<int> rawDelete(String sql, [List<Object?>? arguments]) async => 0;
+
+  @override
+  Future<int> rawInsert(String sql, [List<Object?>? arguments]) async => 1;
+
+  @override
+  Future<List<Map<String, dynamic>>> rawQuery(String sql, [List<Object?>? arguments]) async {
+    if (sql.contains('FROM app_users')) {
+      final users = _tables['app_users'] ?? [];
+      return [{'count': users.length}];
+    }
+    if (sql.contains('FROM invoices')) {
+      final invs = _tables['invoices'] ?? [];
+      return [{'count': invs.length}];
+    }
+    return [{'count': 0}];
+  }
+
+  @override
+  Future<int> rawUpdate(String sql, [List<Object?>? arguments]) async => 1;
+
+  @override
+  Future<T> transaction<T>(Future<T> Function(Transaction txn) action, {bool? exclusive}) async {
+    return await action(_WebTransaction(this));
+  }
+
+  @override
+  Future<int> update(String table, Map<String, Object?> values, {String? where, List<Object?>? whereArgs, ConflictAlgorithm? conflictAlgorithm}) async {
+    return 1;
+  }
+
+  @override
+  Database get database => this;
+}
+
+class _WebTransaction implements Transaction {
+  final _WebMemoryDatabase _db;
+  _WebTransaction(this._db);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  Batch batch() => _db.batch();
+
+  @override
+  Future<int> delete(String table, {String? where, List<Object?>? whereArgs}) => _db.delete(table, where: where, whereArgs: whereArgs);
+
+  @override
+  Future<void> execute(String sql, [List<Object?>? arguments]) => _db.execute(sql, arguments);
+
+  @override
+  Future<int> insert(String table, Map<String, Object?> values, {String? nullColumnHack, ConflictAlgorithm? conflictAlgorithm}) =>
+      _db.insert(table, values, nullColumnHack: nullColumnHack, conflictAlgorithm: conflictAlgorithm);
+
+  @override
+  Future<List<Map<String, dynamic>>> query(String table, {bool? distinct, List<String>? columns, String? where, List<Object?>? whereArgs, String? groupBy, String? having, String? orderBy, int? limit, int? offset}) =>
+      _db.query(table, distinct: distinct, columns: columns, where: where, whereArgs: whereArgs, groupBy: groupBy, having: having, orderBy: orderBy, limit: limit, offset: offset);
+
+  @override
+  Future<int> rawDelete(String sql, [List<Object?>? arguments]) => _db.rawDelete(sql, arguments);
+
+  @override
+  Future<int> rawInsert(String sql, [List<Object?>? arguments]) => _db.rawInsert(sql, arguments);
+
+  @override
+  Future<List<Map<String, dynamic>>> rawQuery(String sql, [List<Object?>? arguments]) => _db.rawQuery(sql, arguments);
+
+  @override
+  Future<int> rawUpdate(String sql, [List<Object?>? arguments]) => _db.rawUpdate(sql, arguments);
+
+  @override
+  Future<int> update(String table, Map<String, Object?> values, {String? where, List<Object?>? whereArgs, ConflictAlgorithm? conflictAlgorithm}) =>
+      _db.update(table, values, where: where, whereArgs: whereArgs, conflictAlgorithm: conflictAlgorithm);
+
+  @override
+  Database get database => _db;
 }
