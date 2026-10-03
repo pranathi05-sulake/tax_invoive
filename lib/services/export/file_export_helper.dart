@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'export_platform_stub.dart'
+    if (dart.library.io) 'export_platform_io.dart'
+    if (dart.library.html) 'export_platform_web.dart';
 
 class ExportResult {
   final bool success;
@@ -28,38 +26,12 @@ class FileExportHelper {
     String? mimeType,
     String? shareSubject,
   }) async {
-    if (kIsWeb) {
-      return ExportResult(
-        success: true,
-        fileName: fileName,
-        filePath: 'downloads/$fileName',
-      );
-    }
-    try {
-      final dir = await getTemporaryDirectory();
-      final filePath = p.join(dir.path, fileName);
-      final file = File(filePath);
-
-      await file.writeAsBytes(bytes, flush: true);
-
-      // Trigger native Android share/save sheet
-      final xFile = XFile(filePath, mimeType: mimeType, name: fileName);
-      await Share.shareXFiles(
-        [xFile],
-        text: shareSubject ?? 'Tax Invoice Export — $fileName',
-      );
-
-      return ExportResult(
-        success: true,
-        filePath: filePath,
-        fileName: fileName,
-      );
-    } catch (e) {
-      return ExportResult(
-        success: false,
-        errorMessage: 'Failed to export file: $e',
-      );
-    }
+    return await platformExportBytes(
+      bytes: bytes,
+      fileName: fileName,
+      mimeType: mimeType,
+      shareSubject: shareSubject,
+    );
   }
 
   Future<ExportResult> exportString({
@@ -68,30 +40,11 @@ class FileExportHelper {
     String? mimeType,
     String? shareSubject,
   }) async {
-    try {
-      final dir = await getTemporaryDirectory();
-      final filePath = p.join(dir.path, fileName);
-      final file = File(filePath);
-
-      await file.writeAsString(content, flush: true);
-
-      // Trigger native Android share/save sheet
-      final xFile = XFile(filePath, mimeType: mimeType, name: fileName);
-      await Share.shareXFiles(
-        [xFile],
-        text: shareSubject ?? 'Tax Invoice Export — $fileName',
-      );
-
-      return ExportResult(
-        success: true,
-        filePath: filePath,
-        fileName: fileName,
-      );
-    } catch (e) {
-      return ExportResult(
-        success: false,
-        errorMessage: 'Failed to export file: $e',
-      );
-    }
+    return await platformExportString(
+      content: content,
+      fileName: fileName,
+      mimeType: mimeType,
+      shareSubject: shareSubject,
+    );
   }
 }

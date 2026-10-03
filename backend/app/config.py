@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     DB_POOL_RECYCLE: int = 1800
 
     # CORS Allowed Origins
-    CORS_ORIGINS: str = "http://localhost:8000,http://127.0.0.1:8000"
+    CORS_ORIGINS: str = "http://localhost:8080,http://127.0.0.1:8080,http://localhost:8000,http://127.0.0.1:8000"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -52,9 +52,16 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
-        """Parses comma-separated CORS origins."""
+        """Parses comma-separated CORS origins for FastAPI middleware."""
+        default_origins = [
+            "http://localhost:8080",
+            "http://127.0.0.1:8080",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ]
         if not self.CORS_ORIGINS or self.CORS_ORIGINS.strip() == "*":
-            return ["*"]
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+            return default_origins
+        origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip() and origin.strip() != "*"]
+        return origins if origins else default_origins
 
 settings = Settings()

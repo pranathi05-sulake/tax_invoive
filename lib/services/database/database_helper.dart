@@ -41,7 +41,7 @@ class WorkflowLogEntry {
     return {
       'id': id,
       'execution_id': executionId,
-      'invoice_id': invoiceId,
+      'invoice_id': invoiceId.trim().isNotEmpty ? invoiceId : null,
       'source_path': sourcePath,
       'step': step,
       'status': status,
@@ -289,7 +289,7 @@ class DatabaseHelper {
     return await _openSqlDatabase(
       path,
       password: dbKey,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -539,7 +539,8 @@ class DatabaseHelper {
         step TEXT,
         status TEXT,
         message TEXT,
-        timestamp TEXT
+        timestamp TEXT,
+        FOREIGN KEY (invoice_id) REFERENCES invoices (id) ON DELETE CASCADE
       )
     ''');
 
@@ -628,6 +629,32 @@ class DatabaseHelper {
         } catch (e) {
           debugPrint('[DatabaseHelper] v4 Migration query note: $e');
         }
+      }
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS workflow_logs_temp (
+          id TEXT PRIMARY KEY,
+          execution_id TEXT,
+          invoice_id TEXT,
+          source_path TEXT,
+          step TEXT,
+          status TEXT,
+          message TEXT,
+          timestamp TEXT,
+          FOREIGN KEY (invoice_id) REFERENCES invoices (id) ON DELETE CASCADE
+        )
+      ''');
+      try {
+        await db.execute('''
+          INSERT INTO workflow_logs_temp (id, execution_id, invoice_id, source_path, step, status, message, timestamp)
+          SELECT id, execution_id, invoice_id, source_path, step, status, message, timestamp
+          FROM workflow_logs;
+        ''');
+        await db.execute('DROP TABLE workflow_logs;');
+        await db.execute('ALTER TABLE workflow_logs_temp RENAME TO workflow_logs;');
+      } catch (e) {
+        debugPrint('[DatabaseHelper] v5 Migration note: $e');
       }
     }
   }
@@ -782,12 +809,13 @@ class DatabaseHelper {
     String? id,
   }) async {
     final db = await instance.database;
-    final dateStr = date.toIso8601String();
+    final dateIso = date.toIso8601String();
+    final dateStr = dateIso.length >= 10 ? dateIso.substring(0, 10) : dateIso;
 
     final results = await db.query(
       'invoices',
-      where: '(gstin = ? AND invoice_number = ? AND date = ?) OR id = ?',
-      whereArgs: [gstin, invoiceNumber, dateStr, id ?? ''],
+      where: '(gstin = ? AND invoice_number = ? AND (date = ? OR substr(date, 1, 10) = ?)) OR (id = ? AND id != \'\')',
+      whereArgs: [gstin, invoiceNumber, dateStr, dateStr, id ?? ''],
       limit: 1,
     );
 
@@ -915,6 +943,16 @@ class _WebMemoryDatabase implements Database {
       list.clear();
       return count;
     }
+    if (where.contains('id = ?') && whereArgs != null && whereArgs.isNotEmpty) {
+      final targetId = whereArgs.first.toString();
+      if (table == 'invoices') {
+        _tables['invoice_items']?.removeWhere((row) => row['invoice_id'] == targetId);
+        _tables['workflow_logs']?.removeWhere((row) => row['invoice_id'] == targetId);
+      }
+      final count = list.where((row) => row['id'].toString() == targetId).length;
+      list.removeWhere((row) => row['id'].toString() == targetId);
+      return count;
+    }
     return 0;
   }
 
@@ -946,6 +984,18 @@ class _WebMemoryDatabase implements Database {
       if (where.contains('LOWER(username) = ?') || where.contains('username = ?')) {
         final target = whereArgs.first.toString().toLowerCase();
         return list.where((row) => (row['username'] as String?)?.toLowerCase() == target).toList();
+      }
+      if (where.contains('gstin = ? AND invoice_number = ?')) {
+        final gstinVal = whereArgs[0].toString();
+        final invNumVal = whereArgs[1].toString();
+        final dateVal = whereArgs[2].toString();
+        return list.where((row) {
+          final rowGstin = row['gstin'] as String? ?? '';
+          final rowInvNum = row['invoice_number'] as String? ?? '';
+          final rowDate = row['date'] as String? ?? '';
+          final rowDateSub = rowDate.length >= 10 ? rowDate.substring(0, 10) : rowDate;
+          return rowGstin == gstinVal && rowInvNum == invNumVal && rowDateSub == dateVal;
+        }).toList();
       }
       if (where.contains('id = ?')) {
         final targetId = whereArgs.first.toString();

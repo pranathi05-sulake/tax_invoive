@@ -1,8 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/auth/auth_service.dart';
+import '../widgets/common_helicopter_background.dart';
 import 'home_screen.dart';
 
+export '../widgets/common_helicopter_background.dart' show HelicopterOutlineIcon, HelicopterBranding, BottomFeatureStrip;
+
+/// LoginScreen: Uses the shared CommonHelicopterBackground for ALL users and roles
+/// (Administrator, Reviewer, Operator, etc.).
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -15,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _rememberMe = true;
   String? _errorMessage;
 
   @override
@@ -54,338 +60,479 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showForgotPasswordNotice() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Please contact your Helicopter Division Administrator to reset credentials.',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Color(0xFF0F172A),
+        duration: Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showQrCodeNotice() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'QR Code authorization is available for registered Helicopter Division mobile nodes.',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Color(0xFF0F172A),
+        duration: Duration(seconds: 4),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      body: Stack(
-        children: [
-          // Background Image (Helicopter Hangar / Airfield at sunset)
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/login_background.png',
-              fit: BoxFit.cover,
-              alignment: Alignment.center, // Perfect balance for 9:16 clean portrait background
-            ),
-          ),
+    // Uses the ONE common full-screen background shared by ALL user roles
+    return CommonHelicopterBackground(
+      child: _buildLoginCard(context),
+    );
+  }
 
-          // Light, non-intrusive Overlay (Preserves bright sunset and helicopter visibility)
-          Positioned.fill(
-            child: Container(
-              color: const Color(0xFF0F172A).withValues(alpha: 0.12),
-            ),
-          ),
+  /// Reusable Frosted Glass Login Panel
+  Widget _buildLoginCard(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWide = screenWidth >= 1050;
 
-          // Main Login Content Container
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 390),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Error Banner if present
-                      if (_errorMessage != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          margin: const EdgeInsets.only(bottom: 20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEF2F2).withValues(alpha: 0.95),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFFCA5A5)),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: isWide ? 28 : 20, vertical: 22),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.42),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.32),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 32,
+                spreadRadius: 2,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Top Helicopter Icon
+                const Center(
+                  child: HelicopterOutlineIcon(
+                    size: 36,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // "TaxInvoice AI"
+                Center(
+                  child: RichText(
+                    text: const TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'TaxInvoice ',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.3,
                           ),
+                        ),
+                        TextSpan(
+                          text: 'AI',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFE5A93C),
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 3),
+
+                // "Invoice Processing & Verification"
+                const Center(
+                  child: Text(
+                    'Invoice Processing & Verification',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFCBD5E1),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Gold divider: "HELICOPTER DIVISION"
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(width: 24, height: 1.2, color: const Color(0xFFE5A93C)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'HELICOPTER DIVISION',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2.0,
+                        color: Color(0xFFE5A93C),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(width: 24, height: 1.2, color: const Color(0xFFE5A93C)),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
+                // Welcome Back Header
+                const Text(
+                  'Welcome Back',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Sign in to access your invoice management system.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFFCBD5E1),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Error Banner if present
+                if (_errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2).withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF991B1B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Username Field
+                _buildInputField(
+                  controller: _usernameController,
+                  icon: Icons.person_outline_rounded,
+                  label: 'Username',
+                  hint: 'Enter your username',
+                  obscureText: false,
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 14),
+
+                // Password Field
+                _buildInputField(
+                  controller: _passwordController,
+                  icon: Icons.lock_outline_rounded,
+                  label: 'Password',
+                  hint: 'Enter your password',
+                  obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _handleLogin(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      size: 19,
+                      color: Colors.white70,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Remember Me + Forgot Password Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _rememberMe = !_rememberMe;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 20),
-                              const SizedBox(width: 10),
-                              Expanded(
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: Checkbox(
+                                  value: _rememberMe,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _rememberMe = val ?? false;
+                                    });
+                                  },
+                                  activeColor: const Color(0xFF2563EB),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  side: BorderSide(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    width: 1.4,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Flexible(
                                 child: Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF991B1B),
+                                  'Remember me',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-
-                      // Translucent Frosted Glass Login Panel
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 28),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.22), // Highly translucent frosted white
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.45), // Subtle light glass border
-                                width: 1.2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.12),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Helicopter Icon Badge
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  margin: const EdgeInsets.only(bottom: 14),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0F172A),
-                                    borderRadius: BorderRadius.circular(14),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF0F172A).withValues(alpha: 0.2),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Center(
-                                    child: HelicopterIcon(
-                                      size: 30,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-
-                                // Header Titles
-                                const Text(
-                                  'HELICOPTER DIVISION',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 2.2,
-                                    color: Color(0xFF1E293B),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'TaxInvoice AI',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0F172A),
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Container(
-                                  width: 32,
-                                  height: 2.5,
-                                  margin: const EdgeInsets.symmetric(vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF2563EB),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                                const Text(
-                                  'Secure Document Processing',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF334155),
-                                  ),
-                                ),
-                                const SizedBox(height: 26),
-
-                                // Username Label & Translucent Field
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: const Text(
-                                    'Username',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: _usernameController,
-                                  textInputAction: TextInputAction.next,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF0F172A),
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter username',
-                                    hintStyle: const TextStyle(
-                                      color: Color(0xFF475569),
-                                      fontSize: 14,
-                                    ),
-                                    prefixIcon: const Icon(
-                                      Icons.person_outline_rounded,
-                                      size: 20,
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white.withValues(alpha: 0.50), // Translucent input background
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.60)),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.60)),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-
-                                // Password Label & Translucent Field
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: const Text(
-                                    'Password',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: _passwordController,
-                                  obscureText: _obscurePassword,
-                                  textInputAction: TextInputAction.done,
-                                  onSubmitted: (_) => _handleLogin(),
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF0F172A),
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter password',
-                                    hintStyle: const TextStyle(
-                                      color: Color(0xFF475569),
-                                      fontSize: 14,
-                                    ),
-                                    prefixIcon: const Icon(
-                                      Icons.lock_outline_rounded,
-                                      size: 20,
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscurePassword
-                                            ? Icons.visibility_off_outlined
-                                            : Icons.visibility_outlined,
-                                        size: 20,
-                                        color: const Color(0xFF1E293B),
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _obscurePassword = !_obscurePassword;
-                                        });
-                                      },
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white.withValues(alpha: 0.50), // Translucent input background
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.60)),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.60)),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-
-                                // Solid Navy SIGN IN Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 50,
-                                  child: ElevatedButton(
-                                    onPressed: _isLoading ? null : _handleLogin,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF0F172A),
-                                      foregroundColor: Colors.white,
-                                      disabledBackgroundColor: const Color(0xFF475569),
-                                      elevation: 2,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: _isLoading
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: const [
-                                              Text(
-                                                'SIGN IN',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w700,
-                                                  letterSpacing: 1.0,
-                                                ),
-                                              ),
-                                              SizedBox(width: 8),
-                                              Icon(Icons.arrow_forward_rounded, size: 18),
-                                            ],
-                                          ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _showForgotPasswordNotice,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Forgot password?',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: Color(0xFF60A5FA),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
-                      // Subdued Footer Tagline
-                      const Text(
-                        'Helicopter Division Enterprise • Offline Secure Node',
-                        textAlign: TextAlign.center,
+                // Primary Login Button
+                SizedBox(
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _handleLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: const Color(0xFF334155),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.18),
+                        ),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.login_rounded, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Login',
+                                style: TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(Icons.arrow_forward_rounded, size: 18),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // OR Divider
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 1,
+                        color: Colors.white.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Text(
+                        'OR',
                         style: TextStyle(
                           fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(0, 1),
-                              blurRadius: 4.0,
-                              color: Colors.black,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 1,
+                        color: Colors.white.withValues(alpha: 0.18),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Secondary Button: Login with QR Code
+                InkWell(
+                  onTap: _showQrCodeNotice,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.qr_code_scanner_rounded,
+                          size: 20,
+                          color: Color(0xFF60A5FA),
+                        ),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Text(
+                                'Login with QR Code',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                'Scan with authorized device',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Security Information Card
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.50),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFE5A93C).withValues(alpha: 0.35),
+                      width: 1.0,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFFE5A93C).withValues(alpha: 0.20),
+                        ),
+                        child: const Icon(
+                          Icons.shield_outlined,
+                          color: Color(0xFFE5A93C),
+                          size: 19,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Secure Local Access',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'This system operates in a secured local environment for the Helicopter Division.',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: Color(0xFFCBD5E1),
+                                height: 1.3,
+                              ),
                             ),
                           ],
                         ),
@@ -393,15 +540,112 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 14),
+
+                // Card Footer
+                Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        'v1.0.0  |  Secure Invoice Processing • Helicopter Division',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.65),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'TaxInvoice AI © 2026',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Custom Frosted Translucent Input Field
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String label,
+    required String hint,
+    required bool obscureText,
+    TextInputAction textInputAction = TextInputAction.next,
+    void Function(String)? onSubmitted,
+    Widget? suffixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          obscureText: obscureText,
+          textInputAction: textInputAction,
+          onSubmitted: onSubmitted,
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            labelText: label,
+            labelStyle: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: Colors.white.withValues(alpha: 0.40),
+              fontSize: 12.5,
+            ),
+            prefixIcon: Icon(
+              icon,
+              size: 19,
+              color: Colors.white70,
+            ),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.10),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.28),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.28),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: Color(0xFFE5A93C),
+                width: 1.5,
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
+/// Backwards-compatible HelicopterIcon for other screens
 class HelicopterIcon extends StatelessWidget {
   final double size;
   final Color color;
@@ -414,131 +658,9 @@ class HelicopterIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _HelicopterPainter(color: color),
-      ),
+    return HelicopterOutlineIcon(
+      size: size,
+      color: color,
     );
   }
 }
-
-class _HelicopterPainter extends CustomPainter {
-  final Color color;
-
-  _HelicopterPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scale = size.width / 32.0;
-
-    final fillPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-
-    final strokePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0 * scale
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..isAntiAlias = true;
-
-    final thinStroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5 * scale
-      ..strokeCap = StrokeCap.round
-      ..isAntiAlias = true;
-
-    // 1. Top Main Rotor Blade (Horizontal Line)
-    canvas.drawLine(
-      Offset(3 * scale, 5 * scale),
-      Offset(29 * scale, 5 * scale),
-      strokePaint,
-    );
-
-    // Main Rotor Mast
-    canvas.drawLine(
-      Offset(16 * scale, 5 * scale),
-      Offset(16 * scale, 9 * scale),
-      strokePaint,
-    );
-
-    // 2. Helicopter Body (Fuselage + Cockpit + Tail Boom)
-    final bodyPath = Path();
-    bodyPath.moveTo(14 * scale, 9 * scale);
-    bodyPath.lineTo(19 * scale, 9 * scale);
-    bodyPath.cubicTo(
-      24 * scale, 10 * scale,
-      25.5 * scale, 14 * scale,
-      23 * scale, 17.5 * scale,
-    );
-    bodyPath.quadraticBezierTo(
-      19 * scale, 19 * scale,
-      12 * scale, 18.5 * scale,
-    );
-    bodyPath.lineTo(4 * scale, 14 * scale);
-    bodyPath.lineTo(4 * scale, 12 * scale);
-    bodyPath.lineTo(14 * scale, 9 * scale);
-    bodyPath.close();
-
-    canvas.drawPath(bodyPath, fillPaint);
-
-    // 3. Tail Fin & Tail Rotor
-    canvas.drawLine(
-      Offset(4 * scale, 8 * scale),
-      Offset(4 * scale, 15 * scale),
-      strokePaint,
-    );
-    canvas.drawLine(
-      Offset(2 * scale, 7.5 * scale),
-      Offset(6 * scale, 10.5 * scale),
-      thinStroke,
-    );
-
-    // 4. Cockpit Window Cutout (Negative Space)
-    final windowPath = Path();
-    windowPath.moveTo(17 * scale, 10.5 * scale);
-    windowPath.lineTo(21 * scale, 11 * scale);
-    windowPath.cubicTo(
-      22.5 * scale, 12.5 * scale,
-      22 * scale, 14.5 * scale,
-      20.5 * scale, 15 * scale,
-    );
-    windowPath.lineTo(17 * scale, 15 * scale);
-    windowPath.close();
-
-    final windowPaint = Paint()
-      ..color = const Color(0xFF0F172A)
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-
-    canvas.drawPath(windowPath, windowPaint);
-
-    // 5. Landing Skids
-    canvas.drawLine(
-      Offset(19 * scale, 18.5 * scale),
-      Offset(18 * scale, 23.5 * scale),
-      strokePaint,
-    );
-    canvas.drawLine(
-      Offset(13 * scale, 18.5 * scale),
-      Offset(12 * scale, 23.5 * scale),
-      strokePaint,
-    );
-    canvas.drawLine(
-      Offset(7 * scale, 23.5 * scale),
-      Offset(25 * scale, 23.5 * scale),
-      strokePaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-
-

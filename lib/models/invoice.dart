@@ -325,6 +325,11 @@ class Invoice {
     );
   }
 
+  /// Safely rounds a monetary value to 2 decimal places compatible with MySQL DECIMAL(15,2).
+  static double roundMoney(double val) {
+    return ((val * 100).round()) / 100.0;
+  }
+
   /// Converts this Invoice instance into the JSON payload expected by FastAPI `POST /api/v1/invoices`.
   Map<String, dynamic> toSyncPayload({String verifiedByFallback = 'OPERATOR'}) {
     final vBy = verifiedBy.trim().isNotEmpty ? verifiedBy.trim() : verifiedByFallback;
@@ -332,17 +337,30 @@ class Invoice {
     final invDateStr = date.toIso8601String().substring(0, 10);
     final validGstin = gstin.trim().length == 15 ? gstin.trim() : '29ABCDE1234F1Z5';
 
+    final roundedSubtotal = roundMoney(subtotal);
+    final roundedCgst = roundMoney(cgst);
+    final roundedSgst = roundMoney(sgst);
+    final roundedIgst = roundMoney(igst);
+    final roundedTotal = roundMoney(totalAmount);
+
     final payloadItems = items.map((item) {
+      final itemTaxable = roundMoney(item.amount);
+      final itemUnitPrice = roundMoney(item.unitPrice);
+      final itemCgst = 0.0;
+      final itemSgst = 0.0;
+      final itemIgst = 0.0;
+      final itemTotal = roundMoney(itemTaxable + itemCgst + itemSgst + itemIgst);
+
       return {
         'hsn_sac': item.hsnSac.isNotEmpty ? item.hsnSac : '00000000',
         'description': item.description.isNotEmpty ? item.description : 'Line Item',
         'quantity': item.quantity > 0 ? item.quantity.toDouble() : 1.0,
-        'unit_price': item.unitPrice,
-        'taxable_value': item.amount,
-        'cgst': 0.0,
-        'sgst': 0.0,
-        'igst': 0.0,
-        'total_amount': item.amount,
+        'unit_price': itemUnitPrice,
+        'taxable_value': itemTaxable,
+        'cgst': itemCgst,
+        'sgst': itemSgst,
+        'igst': itemIgst,
+        'total_amount': itemTotal,
       };
     }).toList();
 
@@ -351,12 +369,12 @@ class Invoice {
         'hsn_sac': '00000000',
         'description': 'Invoice Total Item',
         'quantity': 1.0,
-        'unit_price': subtotal > 0 ? subtotal : 1.0,
-        'taxable_value': subtotal > 0 ? subtotal : 1.0,
-        'cgst': cgst,
-        'sgst': sgst,
-        'igst': igst,
-        'total_amount': totalAmount > 0 ? totalAmount : 1.0,
+        'unit_price': roundMoney(subtotal > 0 ? subtotal : 1.0),
+        'taxable_value': roundMoney(subtotal > 0 ? subtotal : 1.0),
+        'cgst': roundedCgst,
+        'sgst': roundedSgst,
+        'igst': roundedIgst,
+        'total_amount': roundMoney(totalAmount > 0 ? totalAmount : 1.0),
       });
     }
 
@@ -366,11 +384,11 @@ class Invoice {
       'invoice_date': invDateStr,
       'vendor_name': vendorName.isNotEmpty ? vendorName : 'Vendor',
       'gstin': validGstin,
-      'taxable_value': subtotal,
-      'cgst': cgst,
-      'sgst': sgst,
-      'igst': igst,
-      'total_amount': totalAmount,
+      'taxable_value': roundedSubtotal,
+      'cgst': roundedCgst,
+      'sgst': roundedSgst,
+      'igst': roundedIgst,
+      'total_amount': roundedTotal,
       'verification_status': 'VERIFIED',
       'verified_by': vBy,
       'verified_at': vAt,
